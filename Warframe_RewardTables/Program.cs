@@ -25,7 +25,7 @@ namespace Warframe_RewardTables
         private static List<string> dropTableList = new List<string>();
         private static Dictionary<int, string> dropPos = new Dictionary<int, string>();
         private static List<int> sortedDrop = new List<int>();
-        private static int dropTableIndex = -1;
+        private static int dropTableIndex = -2;
 
         private static Dictionary<string, int> dropOrder = new Dictionary<string, int>(); 
 
@@ -78,6 +78,7 @@ namespace Warframe_RewardTables
                 }
                 else if (file[i].Contains("/Lotus/Types/DropTables/") && file[i].Length < 2000) //char limit, else we start parsing the TOC
                 {
+                    if (file[i].Contains("Default")) continue;
                     var parts = file[i].TrimEnd(',').Split('/');
                     var name = parts[parts.Length - 1];
                     if (name.Trim().Length == 0) continue;
@@ -198,7 +199,7 @@ namespace Warframe_RewardTables
                     var curorder = dropOrder[file[i].Split(new[] {'_'}, 2)[1].TrimEnd(new[] {'=', '{'})];
                     if (curorder <= previousdrop)
                     {
-                        write2 += ParseDrops(list.ToArray()) + "\n , , , , , , , , \n";
+                        write2 += ParseDrops(list.ToArray()); //+ "\n , , , , , , , , \n";
                         list.Clear();
                         start = true;
                         list.Add(file[i]);
@@ -220,13 +221,14 @@ namespace Warframe_RewardTables
                     list.Add(file[i]);
                 else
                 {
-                    write2 += ParseDrops(list.ToArray()) + "\n , , , , , , , , \n";
+                    write2 += ParseDrops(list.ToArray()); //+ "\n , , , , , , , , \n";
                     list.Clear();
                     start = false;
                 }
             }
             Console.WriteLine("Writing to file.");
             File.WriteAllText(filename + ".csv", write);
+            File.WriteAllText(filename + ".drops.txt", write2);
             Console.WriteLine("Done.");
         }
 
@@ -403,16 +405,24 @@ namespace Warframe_RewardTables
         static string ParseDrops(string[] file)
         {
             if (file.Length == 0) return "";
-            dropTableIndex++;
             var tablename = "???";
-            try
+            if (dropTableIndex == -2)
             {
-                tablename = dropPos[sortedDrop[dropTableIndex]];
+                tablename = "DefaultPickups";
+                dropTableIndex++;
             }
-            catch   //Since there may be a mismatch of tables available and tables being used, fail gracefully.
+            else
             {
+                dropTableIndex++;
+                try
+                {
+                    tablename = dropPos[sortedDrop[dropTableIndex]];
+                }
+                catch //Since there may be a mismatch of tables available and tables being used, fail gracefully.
+                {
+                }
             }
-            var rtn = string.Format("{0}\nItem,Bias,Rarity,Probability\n", tablename);
+            //var rtn = string.Format("{0}\nItem,Bias,Rarity,Probability\n", tablename);
             for (int i = 0; i < file.Length; i++)
             {
                 if ((file[i].StartsWith("DROP_AMMO") || file[i].StartsWith("DROP_BLUEPRINT") ||
@@ -422,7 +432,7 @@ namespace Warframe_RewardTables
                     
                 }
             }
-            return "";
+            return tablename + "\n---------------\n" + string.Join("\n", file) + "\n______________________________________\n\n";
         }
         
         static List<int> GetPositions(string source, string searchString)
