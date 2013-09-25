@@ -22,10 +22,20 @@ namespace Warframe_RewardTables
         private static List<int> sortedReward = new List<int>();
         private static int rewardTableIndex = -1;
 
-        private static List<string> dropTableList = new List<string>(); 
+        private static List<string> dropTableList = new List<string>();
+        private static Dictionary<int, string> dropPos = new Dictionary<int, string>();
+        private static List<int> sortedDrop = new List<int>();
+        private static int dropTableIndex = -1;
+
+        private static Dictionary<string, int> dropOrder = new Dictionary<string, int>(); 
 
         static void Main(string[] args)
         {
+            dropOrder.Add("AMMO", 0);
+            dropOrder.Add("BLUEPRINT", 1);
+            dropOrder.Add("MISC_ITEM", 2);
+            dropOrder.Add("MOD", 3);
+            dropOrder.Add("POWERUP", 4);
             if (args.Length < 1)
             {
                 Console.WriteLine("Syntax: <file> [dump/extract]");
@@ -63,29 +73,32 @@ namespace Warframe_RewardTables
                     var parts = file[i].Split('=');
                     var nameparts = parts[1].Split('/');
                     var name = nameparts[nameparts.Length - 1];
+                    if (name.Trim().Length == 0) continue;
                     if (!rewardList.Contains(parts[1])) rewardList.Add(name);
                 }
-                else if (file[i].Contains("/Lotus/Types/DropTables/") && file[i].Length < 2000)
+                else if (file[i].Contains("/Lotus/Types/DropTables/") && file[i].Length < 2000) //char limit, else we start parsing the TOC
                 {
                     var parts = file[i].TrimEnd(',').Split('/');
                     var name = parts[parts.Length - 1];
+                    if (name.Trim().Length == 0) continue;
                     if (!dropTableList.Contains(name)) dropTableList.Add(name);
                 }
             }
             Console.WriteLine("Found {0} used reward table types.", rewardList.Count);
             //Manual overrides
             rewardList.Add("NightmareModeRewards");
-            rewardList.Add("OrokinMissionRewards");
+            rewardList.Add("RaidMissionRewardsA");  //These are the old tables that have yet to be taken out.
+            rewardList.Add("OrokinMissionRewards"); 
             rewardList.Add("OrokinMissionRewardsB");
             rewardList.Add("OrokinMissionRewardsC");
             rewardList.Add("OrokinMobDefenseRewards");
             rewardList.Add("OrokinMobDefenseRewardsB");
             rewardList.Add("OrokinMobDefenseRewardsC");
-            rewardList.Add("RaidMissionRewardsA");
 
             Console.WriteLine("Searching for {0} reward table types.", rewardList.Count);
             Console.WriteLine("Found {0} item drop table types.", dropTableList.Count);
-
+            Console.WriteLine("--------------------------------------");
+            Console.WriteLine("Determining reward table names and arrangement.");
             foreach (var table in rewardList)
             {
                 Console.WriteLine("Searching for " + table + "A");
@@ -98,47 +111,58 @@ namespace Warframe_RewardTables
                     rewardPos.Add(positions[0], table + "-1");
                     rewardPos.Add(positions[1], table + "-2");
                 }
-                if (table.Contains("Orokin"))
+                if (!table.Contains("Orokin")) continue;
+                Console.WriteLine("Searching for " + table);
+                var positions2 = GetPositions(bigfile, table + "\u0001");
+                Console.WriteLine("Found {0} instances.", positions2.Count);
+                switch (positions2.Count)
                 {
-                    Console.WriteLine("Searching for " + table);
-                    var positions2 = GetPositions(bigfile, table + "\u0001");
-                    Console.WriteLine("Found {0} instances.", positions2.Count);
-                    switch (positions2.Count)
-                    {
-                        case 1:
-                            if (!rewardPos.ContainsKey(positions2[0]))
-                                rewardPos.Add(positions2[0], table + "?");
-                            break;
-                        case 2:
-                            if (!rewardPos.ContainsKey(positions2[0]))
-                                rewardPos.Add(positions2[0], table + "-11");
-                            if (!rewardPos.ContainsKey(positions2[1]))
-                                rewardPos.Add(positions2[1], table + "-12");
-                            break;
-                    }
-                    if (!table.EndsWith("A")) continue;
-                    var table2 = table.Substring(0, table.Length - 1);
-                    Console.WriteLine("Searching for " + table2);
-                    positions2 = GetPositions(bigfile, table2 + "\u0001");
-                    Console.WriteLine("Found {0} instances.", positions2.Count);
-                    switch (positions2.Count)
-                    {
-                        case 1:
-                            if (!rewardPos.ContainsKey(positions2[0]))
-                                rewardPos.Add(positions2[0], table2 + "?");
-                            break;
-                        case 2:
-                            if (!rewardPos.ContainsKey(positions2[0]))
-                                rewardPos.Add(positions2[0], table2 + "-11");
-                            if (!rewardPos.ContainsKey(positions2[1]))
-                                rewardPos.Add(positions2[1], table2 + "-12");
-                            break;
-                    }
+                    case 1:
+                        if (!rewardPos.ContainsKey(positions2[0]))
+                            rewardPos.Add(positions2[0], table + "?");
+                        break;
+                    case 2:
+                        if (!rewardPos.ContainsKey(positions2[0]))
+                            rewardPos.Add(positions2[0], table + "-11");
+                        if (!rewardPos.ContainsKey(positions2[1]))
+                            rewardPos.Add(positions2[1], table + "-12");
+                        break;
+                }
+                if (!table.EndsWith("A")) continue;
+                var table2 = table.Substring(0, table.Length - 1);
+                Console.WriteLine("Searching for " + table2);
+                positions2 = GetPositions(bigfile, table2 + "\u0001");
+                Console.WriteLine("Found {0} instances.", positions2.Count);
+                switch (positions2.Count)
+                {
+                    case 1:
+                        if (!rewardPos.ContainsKey(positions2[0]))
+                            rewardPos.Add(positions2[0], table2 + "?");
+                        break;
+                    case 2:
+                        if (!rewardPos.ContainsKey(positions2[0]))
+                            rewardPos.Add(positions2[0], table2 + "-11");
+                        if (!rewardPos.ContainsKey(positions2[1]))
+                            rewardPos.Add(positions2[1], table2 + "-12");
+                        break;
                 }
             }
-            Console.WriteLine("Found {0} available reward table types.", rewardPos.Count);
             sortedReward = rewardPos.Keys.ToList();
             sortedReward.Sort();
+            Console.WriteLine("Found {0} available reward table types.", rewardPos.Count);
+            Console.WriteLine("--------------------------------------");
+            Console.WriteLine("Determining drop table name and arrangement.");
+            foreach (var table in dropTableList)
+            {
+                var searchstring = table + "A" + "\u0001";
+                Console.WriteLine("Searching for {0}", searchstring);
+                var positions = GetPositions(bigfile, searchstring);
+                if (!dropPos.ContainsKey(positions[0])) dropPos.Add(positions[0], table);
+            }
+            sortedDrop = dropPos.Keys.ToList();
+            sortedDrop.Sort();
+            Console.WriteLine("Found {0} available drop table types.", dropPos.Count);
+            Console.WriteLine("--------------------------------------");
             for (int i = 0; i < file.Length; i++)
             {
                 if (file[i].Trim().StartsWith("Tier") && file[i].Trim().EndsWith("{"))
@@ -158,6 +182,47 @@ namespace Warframe_RewardTables
                         continue;
                     }
                     list.Add(file[i]);
+                }
+            }
+            //I could probably optimize this by merging the 2 for loops together, but cba to.
+            start = false;
+            var previousdrop = 0;
+            list.Clear();
+            var write2 = "";
+            for (int i = 0; i < file.Length; i++)
+            {
+                if ((file[i].StartsWith("DROP_AMMO") || file[i].StartsWith("DROP_BLUEPRINT") ||
+                     file[i].StartsWith("DROP_MISC_ITEM")
+                     || file[i].StartsWith("DROP_MOD") || file[i].StartsWith("DROP_POWERUP")) && file[i].EndsWith("{"))
+                {
+                    var curorder = dropOrder[file[i].Split(new[] {'_'}, 2)[1].TrimEnd(new[] {'=', '{'})];
+                    if (curorder <= previousdrop)
+                    {
+                        write2 += ParseDrops(list.ToArray()) + "\n , , , , , , , , \n";
+                        list.Clear();
+                        start = true;
+                        list.Add(file[i]);
+                        previousdrop = curorder;
+                        continue;
+                    }
+                    else
+                    {
+                        previousdrop = curorder;
+                        list.Add(file[i]);
+                        continue;
+                    }
+                }
+                if (!start) continue;
+                if (file[i].StartsWith("DropChance") || file[i].StartsWith("GearTables") || file[i].StartsWith("OverrideLevelAdjustedBiasAtten")
+                    || file[i].StartsWith("LevelRange") || file[i].StartsWith("Gear") || file[i].StartsWith("SpecifyEntity") || file[i].StartsWith("ItemType")
+                    || file[i].StartsWith("Bias") || file[i].StartsWith("Rarity Constant") || file[i].StartsWith("Probability") || file[i].StartsWith("{")
+                    || file[i].StartsWith("}") || file[i].StartsWith("EntityType"))
+                    list.Add(file[i]);
+                else
+                {
+                    write2 += ParseDrops(list.ToArray()) + "\n , , , , , , , , \n";
+                    list.Clear();
+                    start = false;
                 }
             }
             Console.WriteLine("Writing to file.");
@@ -208,7 +273,14 @@ namespace Warframe_RewardTables
             var tier = int.Parse(file[0].Substring(4, 1)) + 1;
             if (tier == 1)
                 rewardTableIndex++;
-            var tablename = rewardPos[sortedReward[rewardTableIndex]];
+            var tablename = "???";
+            try
+            {
+                tablename = rewardPos[sortedReward[rewardTableIndex]];
+            }
+            catch   //Since there may be a mismatch of tables available and tables being used, fail gracefully.
+            {
+            }
             Console.WriteLine("Found new table. Name: {0} | Reward Tier: {1}", tablename, tier);
             var list = new List<Item>();
             for (int i = 2; i < file.Length; i = i + 5)
@@ -326,6 +398,31 @@ namespace Warframe_RewardTables
             var write = "Tier " + tier + (matherrors ? " (Chance calculation flawed)" : "") + ",Chance,Interval,Rarity";
             write = list.Aggregate(write, (current, item) => current + ("\n" + item.Name + "," + item.Chance + "," + item.Interval + "," + item.Rarity));
             return write;
+        }
+
+        static string ParseDrops(string[] file)
+        {
+            if (file.Length == 0) return "";
+            dropTableIndex++;
+            var tablename = "???";
+            try
+            {
+                tablename = dropPos[sortedDrop[dropTableIndex]];
+            }
+            catch   //Since there may be a mismatch of tables available and tables being used, fail gracefully.
+            {
+            }
+            var rtn = string.Format("{0}\nItem,Bias,Rarity,Probability\n", tablename);
+            for (int i = 0; i < file.Length; i++)
+            {
+                if ((file[i].StartsWith("DROP_AMMO") || file[i].StartsWith("DROP_BLUEPRINT") ||
+                     file[i].StartsWith("DROP_MISC_ITEM")
+                     || file[i].StartsWith("DROP_MOD") || file[i].StartsWith("DROP_POWERUP")) && file[i].EndsWith("{"))
+                {
+                    
+                }
+            }
+            return "";
         }
         
         static List<int> GetPositions(string source, string searchString)
