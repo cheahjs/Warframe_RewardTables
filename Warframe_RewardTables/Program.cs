@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace Warframe_RewardTables
 {
@@ -27,7 +26,9 @@ namespace Warframe_RewardTables
         private static List<int> sortedDrop = new List<int>();
         private static int dropTableIndex = -2;
 
-        private static Dictionary<string, int> dropOrder = new Dictionary<string, int>(); 
+        private static Dictionary<string, int> dropOrder = new Dictionary<string, int>();
+
+        private static NameList nameList;
 
         static void Main(string[] args)
         {
@@ -41,19 +42,21 @@ namespace Warframe_RewardTables
                 Console.WriteLine("Syntax: <file> [dump/extract]");
                 return;
             }
+            nameList = NameList.Deserialize();
             if (args.Length == 2 && args[1] == "extract")
             {
-                ParseExtract(args[0]);
+                StartExtract(args[0]);
             }
             else
             {
-                ParseDump(args[0]);
+                StartDump(args[0]);
             }
+            nameList.Serialize();
             Console.WriteLine("Total tables parsed: {0}\r\nBad tables: {1}", TotalTables, BadTables);
             Console.ReadKey();
         }
 
-        static void ParseExtract(string filename)
+        static void StartExtract(string filename)
         {
             Console.WriteLine("Starting parsing extracted file.");
             var file = File.ReadAllLines(filename);
@@ -129,7 +132,7 @@ namespace Warframe_RewardTables
                             rewardPos.Add(positions2[1], table + "-12");
                         break;
                 }
-                if (!table.EndsWith("A")) continue;
+                /*if (!table.EndsWith("A")) continue;
                 var table2 = table.Substring(0, table.Length - 1);
                 Console.WriteLine("Searching for " + table2);
                 positions2 = GetPositions(bigfile, table2 + "\u0001");
@@ -146,7 +149,7 @@ namespace Warframe_RewardTables
                         if (!rewardPos.ContainsKey(positions2[1]))
                             rewardPos.Add(positions2[1], table2 + "-12");
                         break;
-                }
+                }*/
             }
             sortedReward = rewardPos.Keys.ToList();
             sortedReward.Sort();
@@ -178,7 +181,7 @@ namespace Warframe_RewardTables
                     if ((!file[i].StartsWith("StoreItem") && !file[i].StartsWith("Rarity") && !file[i].StartsWith("UpgradeLevel") && !file[i].StartsWith("{") && !file[i].StartsWith("},"))
                         || (file[i].Trim() == "}" && file[i+1].Trim() == "}"))
                     {
-                        write += ParseExt(list.ToArray()) + "\n , , , \n";
+                        write += ParseRewardsExtracted(list.ToArray()) + "\n , , , \n";
                         start = false;
                         continue;
                     }
@@ -189,7 +192,14 @@ namespace Warframe_RewardTables
             start = false;
             var previousdrop = 0;
             list.Clear();
-            var write2 = "";
+            var write2 = new List<string>();
+            write2.Add(" ");
+            write2.Add("Mod Table Drop Chance");
+            for (int i = 0; i < 12; i++)
+                write2.Add("Mod " + i);
+            write2.Add("BP Table Drop Chance");
+            for (int i = 0; i < 7; i++)
+                write2.Add("BP " + i);
             for (int i = 0; i < file.Length; i++)
             {
                 if ((file[i].StartsWith("DROP_AMMO") || file[i].StartsWith("DROP_BLUEPRINT") ||
@@ -199,7 +209,10 @@ namespace Warframe_RewardTables
                     var curorder = dropOrder[file[i].Split(new[] {'_'}, 2)[1].TrimEnd(new[] {'=', '{'})];
                     if (curorder <= previousdrop)
                     {
-                        write2 += ParseDrops(list.ToArray()); //+ "\n , , , , , , , , \n";
+                        var lst = ParseDropsExtracted(list.ToArray());
+                        if (lst != null)
+                            for (int h = 0; h < lst.Length; h++)
+                                write2[h] += "," + lst[h];
                         list.Clear();
                         start = true;
                         list.Add(file[i]);
@@ -221,18 +234,21 @@ namespace Warframe_RewardTables
                     list.Add(file[i]);
                 else
                 {
-                    write2 += ParseDrops(list.ToArray()); //+ "\n , , , , , , , , \n";
+                    var lst = ParseDropsExtracted(list.ToArray());
+                    if (lst != null)
+                        for (int h = 0; h < lst.Length; h++)
+                            write2[h] += "," + lst[h];
                     list.Clear();
                     start = false;
                 }
             }
             Console.WriteLine("Writing to file.");
-            File.WriteAllText(filename + ".csv", write);
-            File.WriteAllText(filename + ".drops.txt", write2);
+            File.WriteAllText(filename + ".rewards.csv", write);
+            File.WriteAllText(filename + ".drops.csv", string.Join("\n", write2));
             Console.WriteLine("Done.");
         }
 
-        static void ParseDump(string filename)
+        static void StartDump(string filename)
         {
             Console.WriteLine("Starting parsing dump file.");
             var file = File.ReadAllLines(filename);
@@ -245,7 +261,7 @@ namespace Warframe_RewardTables
                 {
                     if (list.Count != 0)
                     {
-                        write += Parse(list.ToArray()) + "\n , , , \n";
+                        write += ParseRewardsDumped(list.ToArray()) + "\n , , , \n";
                         list.Clear();
                     }
                     start = true;
@@ -256,7 +272,7 @@ namespace Warframe_RewardTables
                 {
                     if (!file[i].StartsWith("StoreItem") && !file[i].StartsWith("Rarity") && !file[i].StartsWith("UpgradeLevel"))
                     {
-                        write += Parse(list.ToArray()) + "\n , , , \n";
+                        write += ParseRewardsDumped(list.ToArray()) + "\n , , , \n";
                         list.Clear();
                         start = false;
                         continue;
@@ -269,7 +285,7 @@ namespace Warframe_RewardTables
             Console.WriteLine("Done.");
         }
 
-        static string ParseExt(string[] file)
+        static string ParseRewardsExtracted(string[] file)
         {
             if (file.Length == 0) return "";
             var tier = int.Parse(file[0].Substring(4, 1)) + 1;
@@ -279,6 +295,7 @@ namespace Warframe_RewardTables
             try
             {
                 tablename = rewardPos[sortedReward[rewardTableIndex]];
+                tablename = nameList.GetName(tablename);
             }
             catch   //Since there may be a mismatch of tables available and tables being used, fail gracefully.
             {
@@ -290,6 +307,7 @@ namespace Warframe_RewardTables
                 var nameparts = file[i].Split('/');
                 var name = nameparts[nameparts.Length - 1];
                 name = name.Substring(0, name.Length - 9);
+                name = nameList.GetName(name);
                 var rarity = file[i + 1].Split('=')[1];
                 list.Add(new Item { Rarity = rarity, StoreName = name });
             }
@@ -337,11 +355,11 @@ namespace Warframe_RewardTables
             if (matherrors) BadTables++;
             var write = "Tier " + tier + " - " + tablename
                 + (matherrors ? " (Chance calculation flawed)" : "") + ",Chance,Interval,Rarity";
-            write = list.Aggregate(write, (current, item) => current + ("\n" + item.Name + "," + item.Chance + "," + item.Interval + "," + item.Rarity));
+            write = list.Aggregate(write, (current, item) => current + ("\n" + item.StoreName + "," + item.Chance + "," + item.Interval + "," + item.Rarity));
             return write;
         }
 
-        static string Parse(string[] file)
+        static string ParseRewardsDumped(string[] file)
         {
             if (file.Length == 0) return "";
             var tier = int.Parse(file[0].Substring(4, 1)) + 1;
@@ -352,6 +370,7 @@ namespace Warframe_RewardTables
                 var nameparts = file[i].Split('/');
                 var name = nameparts[nameparts.Length - 1];
                 name = name.Substring(0, name.Length - 9);
+                name = nameList.GetName(name);
                 var rarity = file[i + 1].Split('=')[1];
                 list.Add(new Item { Rarity = rarity, StoreName = name });
             }
@@ -398,13 +417,13 @@ namespace Warframe_RewardTables
             var matherrors = Math.Abs(1 - interval) > 0.1;
             if (matherrors) BadTables++;
             var write = "Tier " + tier + (matherrors ? " (Chance calculation flawed)" : "") + ",Chance,Interval,Rarity";
-            write = list.Aggregate(write, (current, item) => current + ("\n" + item.Name + "," + item.Chance + "," + item.Interval + "," + item.Rarity));
+            write = list.Aggregate(write, (current, item) => current + ("\n" + item.StoreName + "," + item.Chance + "," + item.Interval + "," + item.Rarity));
             return write;
         }
 
-        static string ParseDrops(string[] file)
+        static string[] ParseDropsExtracted(string[] file)
         {
-            if (file.Length == 0) return "";
+            if (file.Length == 0) return null;
             var tablename = "???";
             if (dropTableIndex == -2)
             {
@@ -417,22 +436,88 @@ namespace Warframe_RewardTables
                 try
                 {
                     tablename = dropPos[sortedDrop[dropTableIndex]];
+                    tablename = tablename.Substring(0, tablename.Length - 9);
                 }
                 catch //Since there may be a mismatch of tables available and tables being used, fail gracefully.
                 {
                 }
             }
-            //var rtn = string.Format("{0}\nItem,Bias,Rarity,Probability\n", tablename);
+            tablename = nameList.GetName(tablename);
+            var start = false;
+            var currentdrop = "";
+            var name = "";
+            var mod = new List<DropItem>();
+            var modchance = "?";
+            var bp = new List<DropItem>();
+            var bpchance = "?";
             for (int i = 0; i < file.Length; i++)
             {
                 if ((file[i].StartsWith("DROP_AMMO") || file[i].StartsWith("DROP_BLUEPRINT") ||
                      file[i].StartsWith("DROP_MISC_ITEM")
                      || file[i].StartsWith("DROP_MOD") || file[i].StartsWith("DROP_POWERUP")) && file[i].EndsWith("{"))
                 {
-                    
+                    if (file[i].StartsWith("DROP_BLUEPRINT"))
+                    {
+                        start = true;
+                        currentdrop = "bp";
+                    }
+                    else if (file[i].StartsWith("DROP_MOD"))
+                    {
+                        start = true;
+                        currentdrop = "mod";
+                    }
+                    else
+                    {
+                        start = false;
+                    }
                 }
+                if (start)
+                {
+                    if (file[i].StartsWith("ItemType") || file[i].StartsWith("EntityType"))
+                    {
+                        var item = file[i].Split('=')[1];
+                        var parts = item.Split('/');
+                        item = parts[parts.Length - 1];
+                        item = nameList.GetName(item);
+                        switch (currentdrop)
+                        {
+                            case "bp":
+                                bp.Add(new DropItem {Name = item});
+                                break;
+                            case "mod":
+                                mod.Add(new DropItem { Name = item });
+                                break;
+                        }
+                    }
+                    else if (file[i].StartsWith("DropChance"))
+                    {
+                        var chance = file[i].Split('=')[1];
+                        switch (currentdrop)
+                        {
+                            case "bp":
+                                bpchance = chance;
+                                break;
+                            case "mod":
+                                modchance = chance;
+                                break;
+                        }
+                    }
+                }
+
             }
-            return tablename + "\n---------------\n" + string.Join("\n", file) + "\n______________________________________\n\n";
+            var rtn = new List<string>();
+            rtn.Add(tablename);
+            rtn.Add(modchance);
+            for (int i = 0; i < 12; i++)
+            {
+                rtn.Add(mod.Count > i ? mod[i].Name : "");
+            }
+            rtn.Add(bpchance);
+            for (int i = 0; i < 7; i++)
+            {
+                rtn.Add(bp.Count > i ? bp[i].Name : "");
+            }
+            return rtn.ToArray();
         }
         
         static List<int> GetPositions(string source, string searchString)
@@ -453,51 +538,49 @@ namespace Warframe_RewardTables
                 }
             }
             return ret;
-        }
+        } 
     }
 
     public class Item
     {
         public string StoreName;
-
-        public string Name
-        {
-            get
-            {
-                return GetEnglishString(StoreName);
-            }
-        }
-
         public string Rarity;
         public double Chance;
         public double Interval;
+    }
 
-        public static string GetEnglishString(string storename)
+    public class DropItem
+    {
+        public string Name;
+        public string Bias;
+    }
+
+    public class NameList
+    {
+        public Dictionary<string, string> Names;
+
+        public static NameList Deserialize()
         {
-            var name = storename;
-            switch (storename)
+            if (File.Exists("names.json"))
+                return JsonConvert.DeserializeObject<NameList>(File.ReadAllText("names.json"));
+            return new NameList {Names = new Dictionary<string, string>()};
+        }
+
+        public void Serialize()
+        {
+            File.WriteAllText("names.json", JsonConvert.SerializeObject(this, Formatting.Indented));
+        }
+
+        public string GetName(string name)
+        {
+            if (Names.ContainsKey(name))
             {
-                case "OrokinKeyA":
-                    name = "OrokinT1Exterminate";
-                    break;
-                case "OrokinKeyB":
-                    name = "OrokinT1Survival";
-                    break;
-                case "OrokinKeyC":
-                    name = "OrokinT2Exterminate";
-                    break;
-                case "OrokinKeyD":
-                    name = "OrokinT2Survival";
-                    break;
-                case "OrokinKeyE":
-                    name = "OrokinT3Exterminate";
-                    break;
+                if (Names[name] != "")
+                    return Names[name];
             }
-            var r = new Regex(@"
-                (?<=[A-Z])(?=[A-Z][a-z]) |
-                 (?<=[^A-Z])(?=[A-Z]) |
-                 (?<=[A-Za-z])(?=[^A-Za-z])", RegexOptions.IgnorePatternWhitespace);
-            return r.Replace(name, " ");
+            else
+                Names.Add(name, "");
+            return name;
         }
     }
 }
