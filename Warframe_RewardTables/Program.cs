@@ -300,14 +300,15 @@ namespace Warframe_RewardTables
             catch   //Since there may be a mismatch of tables available and tables being used, fail gracefully.
             {
             }
-            Console.WriteLine("Found new table. Name: {0} | Reward Tier: {1}", tablename, tier);
+            Console.WriteLine("Found new reward table. Name: {0} | Reward Tier: {1}", tablename, tier);
             var list = new List<Item>();
             for (int i = 2; i < file.Length; i = i + 5)
             {
-                var nameparts = file[i].Split('/');
+                /*var nameparts = file[i].Split('/');
                 var name = nameparts[nameparts.Length - 1];
                 name = name.Substring(0, name.Length - 9);
-                name = nameList.GetName(name);
+                name = nameList.GetName(name);*/
+                var name = nameList.GetName(file[i].Split('=')[1]);
                 var rarity = file[i + 1].Split('=')[1];
                 list.Add(new Item { Rarity = rarity, StoreName = name });
             }
@@ -367,10 +368,11 @@ namespace Warframe_RewardTables
             var list = new List<Item>();
             for (int i = 1; i < file.Length; i = i + 3)
             {
-                var nameparts = file[i].Split('/');
+                /*var nameparts = file[i].Split('/');
                 var name = nameparts[nameparts.Length - 1];
                 name = name.Substring(0, name.Length - 9);
-                name = nameList.GetName(name);
+                name = nameList.GetName(name);*/
+                var name = nameList.GetName(file[i].Split('=')[1]);
                 var rarity = file[i + 1].Split('=')[1];
                 list.Add(new Item { Rarity = rarity, StoreName = name });
             }
@@ -443,6 +445,7 @@ namespace Warframe_RewardTables
                 }
             }
             tablename = nameList.GetName(tablename);
+            Console.WriteLine("Found new drop table. Name: {0}", tablename);
             var start = false;
             var currentdrop = "";
             var name = "";
@@ -476,8 +479,9 @@ namespace Warframe_RewardTables
                     if (file[i].StartsWith("ItemType") || file[i].StartsWith("EntityType"))
                     {
                         var item = file[i].Split('=')[1];
-                        var parts = item.Split('/');
+                        /*var parts = item.Split('/');
                         item = parts[parts.Length - 1];
+                        item = nameList.GetName(item);*/
                         item = nameList.GetName(item);
                         switch (currentdrop)
                         {
