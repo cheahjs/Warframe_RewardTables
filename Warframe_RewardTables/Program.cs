@@ -30,6 +30,8 @@ namespace Warframe_RewardTables
 
         private static NameList nameList;
 
+        private static bool Dev = false;
+
         static void Main(string[] args)
         {
             dropOrder.Add("AMMO", 0);
@@ -39,12 +41,17 @@ namespace Warframe_RewardTables
             dropOrder.Add("POWERUP", 4);
             if (args.Length < 1)
             {
-                Console.WriteLine("Syntax: <file> [dump/extract]");
+                Console.WriteLine("Syntax: <file> [dump/extract] [dev]");
                 return;
             }
             nameList = NameList.Deserialize();
-            if (args.Length == 2 && args[1] == "extract")
+            if ((args.Length == 2 || args.Length == 3) && args[1] == "extract")
             {
+                if (args.Length == 3)
+                {
+                    Console.WriteLine("Dev mode is on.");
+                    Dev = true;
+                }
                 StartExtract(args[0]);
             }
             else
@@ -68,6 +75,8 @@ namespace Warframe_RewardTables
             var list = new List<string>();
             var write = "";
             var start = false;
+
+            #region Search Table Labels
             Console.WriteLine("Finding reward table types...");
             for (int i = 0; i < file.Length; i++)
             {
@@ -89,25 +98,33 @@ namespace Warframe_RewardTables
                 }
             }
             Console.WriteLine("Found {0} used reward table types.", rewardList.Count);
+            Console.WriteLine("Found {0} item drop table types.", dropTableList.Count);
             //Manual overrides
             rewardList.Add("NightmareModeRewards");
-            rewardList.Add("RaidMissionRewardsA");  //These are the old tables that have yet to be taken out.
-            rewardList.Add("OrokinMissionRewards"); 
-            rewardList.Add("OrokinMissionRewardsB");
-            rewardList.Add("OrokinMissionRewardsC");
-            rewardList.Add("OrokinMobDefenseRewards");
-            rewardList.Add("OrokinMobDefenseRewardsB");
-            rewardList.Add("OrokinMobDefenseRewardsC");
+            rewardList.Add("OrokinDefenseRewardsAA");
+            if (!Dev)
+            {
+                //These are the old tables that have yet to be taken out. Remove for U11
+                rewardList.Add("RaidMissionRewardsA");
+                rewardList.Add("OrokinMissionRewards"); //U11 remove
+                rewardList.Add("OrokinMissionRewardsB"); //U11 remove    
+                rewardList.Add("OrokinMissionRewardsC"); //U11 remove
+                rewardList.Add("OrokinMobDefenseRewards"); //U11 remove
+                rewardList.Add("OrokinMobDefenseRewardsB"); //U11 remove
+                rewardList.Add("OrokinMobDefenseRewardsC"); //U11 remove
+            }
+            #endregion
 
+            #region Reward Table Search
             Console.WriteLine("Searching for {0} reward table types.", rewardList.Count);
-            Console.WriteLine("Found {0} item drop table types.", dropTableList.Count);
             Console.WriteLine("--------------------------------------");
             Console.WriteLine("Determining reward table names and arrangement.");
             foreach (var table in rewardList)
             {
                 Console.WriteLine("Searching for " + table + "A");
                 var positions = GetPositions(bigfile, table + "A" + "\u0001");
-                Console.WriteLine("Found {0} instances.", positions.Count);
+                if (positions.Count == 0)
+                    Console.WriteLine("Found {0} instances.", positions.Count);
                 if (positions.Count == 1)
                     rewardPos.Add(positions[0], table);
                 else if (positions.Count == 2)
@@ -115,10 +132,11 @@ namespace Warframe_RewardTables
                     rewardPos.Add(positions[0], table + "-1");
                     rewardPos.Add(positions[1], table + "-2");
                 }
-                if (!table.Contains("Orokin")) continue;
+                if (table != "OrokinCaptureRewardsA") continue;
                 Console.WriteLine("Searching for " + table);
-                var positions2 = GetPositions(bigfile, table + "\u0001");
-                Console.WriteLine("Found {0} instances.", positions2.Count);
+                var positions2 = GetPositions(bigfile, table + "A\u0008");   
+                if (positions2.Count == 0)
+                    Console.WriteLine("Found {0} instances.", positions2.Count);
                 switch (positions2.Count)
                 {
                     case 1:
@@ -132,28 +150,13 @@ namespace Warframe_RewardTables
                             rewardPos.Add(positions2[1], table + "-12");
                         break;
                 }
-                /*if (!table.EndsWith("A")) continue;
-                var table2 = table.Substring(0, table.Length - 1);
-                Console.WriteLine("Searching for " + table2);
-                positions2 = GetPositions(bigfile, table2 + "\u0001");
-                Console.WriteLine("Found {0} instances.", positions2.Count);
-                switch (positions2.Count)
-                {
-                    case 1:
-                        if (!rewardPos.ContainsKey(positions2[0]))
-                            rewardPos.Add(positions2[0], table2 + "?");
-                        break;
-                    case 2:
-                        if (!rewardPos.ContainsKey(positions2[0]))
-                            rewardPos.Add(positions2[0], table2 + "-11");
-                        if (!rewardPos.ContainsKey(positions2[1]))
-                            rewardPos.Add(positions2[1], table2 + "-12");
-                        break;
-                }*/
             }
             sortedReward = rewardPos.Keys.ToList();
             sortedReward.Sort();
             Console.WriteLine("Found {0} available reward table types.", rewardPos.Count);
+            #endregion
+
+            #region Drop Table Search
             Console.WriteLine("--------------------------------------");
             Console.WriteLine("Determining drop table name and arrangement.");
             foreach (var table in dropTableList)
@@ -166,10 +169,13 @@ namespace Warframe_RewardTables
             sortedDrop = dropPos.Keys.ToList();
             sortedDrop.Sort();
             Console.WriteLine("Found {0} available drop table types.", dropPos.Count);
+            #endregion
+
+            #region Search for Reward Tables
             Console.WriteLine("--------------------------------------");
             for (int i = 0; i < file.Length; i++)
             {
-                if (file[i].Trim().StartsWith("Tier") && file[i].Trim().EndsWith("{"))
+                if (file[i].StartsWith("Tier") && file[i].EndsWith("{"))
                 {
                     list.Clear();
                     start = true;
@@ -178,7 +184,9 @@ namespace Warframe_RewardTables
                 }
                 if (start)
                 {
-                    if ((!file[i].StartsWith("StoreItem") && !file[i].StartsWith("Rarity") && !file[i].StartsWith("UpgradeLevel") && !file[i].StartsWith("{") && !file[i].StartsWith("},"))
+                    if ((!file[i].StartsWith("StoreItem") && !file[i].StartsWith("Rarity") && !file[i].StartsWith("UpgradeLevel") && !file[i].StartsWith("{")
+                        && !file[i].StartsWith("},") && !file[i].StartsWith("Bias") && !file[i].StartsWith("Atten")
+                        && !file[i].StartsWith("Items")) 
                         || (file[i].Trim() == "}" && file[i+1].Trim() == "}"))
                     {
                         write += ParseRewardsExtracted(list.ToArray()) + "\n , , , \n";
@@ -188,7 +196,9 @@ namespace Warframe_RewardTables
                     list.Add(file[i]);
                 }
             }
-            //I could probably optimize this by merging the 2 for loops together, but cba to.
+            #endregion
+
+            #region Search for Drop Tables
             start = false;
             var previousdrop = 0;
             list.Clear();
@@ -242,6 +252,8 @@ namespace Warframe_RewardTables
                     start = false;
                 }
             }
+            #endregion
+
             Console.WriteLine("Writing to file.");
             File.WriteAllText(filename + ".rewards.csv", write);
             File.WriteAllText(filename + ".drops.csv", string.Join("\n", write2));
@@ -302,7 +314,8 @@ namespace Warframe_RewardTables
             }
             Console.WriteLine("Found new reward table. Name: {0} | Reward Tier: {1}", tablename, tier);
             var list = new List<Item>();
-            for (int i = 2; i < file.Length; i = i + 5)
+            for (int i = (Dev ? 3 : 2); i < file.Length; 
+                i = i + ((Dev && string.Join("", file).Contains("Bias=")) ? 7 : 5))
             {
                 /*var nameparts = file[i].Split('/');
                 var name = nameparts[nameparts.Length - 1];
