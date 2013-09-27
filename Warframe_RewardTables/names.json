@@ -485,8 +485,8 @@
     "/Lotus/Types/Recipes/WarframeRecipes/NovaSystemsBlueprint": "",
     "Sentinel": "",
     "StalkerAgent": "Stalker",
-    "/Lotus/Types/Recipes/Weapons/StalkerBowBlueprint": "Dread",
-    "/Lotus/Types/Recipes/Weapons/StalkerKunaiBlueprint": "Despair",
-    "/Lotus/Types/Recipes/Weapons/StalkerReaperBlueprint": "Hate"
+    "/Lotus/Types/Recipes/Weapons/StalkerBowBlueprint": "Dread Blueprint",
+    "/Lotus/Types/Recipes/Weapons/StalkerKunaiBlueprint": "Despair Blueprint",
+    "/Lotus/Types/Recipes/Weapons/StalkerReaperBlueprint": "Hate Blueprint"
   }
 }
