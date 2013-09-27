@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Warframe_RewardTables", "Warframe_RewardTables\Warframe_RewardTables.csproj", "{BCA4F758-E66F-4906-83EB-50081F41D8DA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Warframe_PackagesParser", "Warframe_PackagesParser\Warframe_PackagesParser.csproj", "{7D7C1361-53C4-4260-86CC-EDDB08A87CED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -13,6 +15,10 @@ Global
 		{BCA4F758-E66F-4906-83EB-50081F41D8DA}.Debug|x86.Build.0 = Debug|x86
 		{BCA4F758-E66F-4906-83EB-50081F41D8DA}.Release|x86.ActiveCfg = Release|x86
 		{BCA4F758-E66F-4906-83EB-50081F41D8DA}.Release|x86.Build.0 = Release|x86
+		{7D7C1361-53C4-4260-86CC-EDDB08A87CED}.Debug|x86.ActiveCfg = Debug|x86
+		{7D7C1361-53C4-4260-86CC-EDDB08A87CED}.Debug|x86.Build.0 = Debug|x86
+		{7D7C1361-53C4-4260-86CC-EDDB08A87CED}.Release|x86.ActiveCfg = Release|x86
+		{7D7C1361-53C4-4260-86CC-EDDB08A87CED}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
