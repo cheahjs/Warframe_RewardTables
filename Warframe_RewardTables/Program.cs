@@ -132,23 +132,45 @@ namespace Warframe_RewardTables
                     rewardPos.Add(positions[0], table + "-1");
                     rewardPos.Add(positions[1], table + "-2");
                 }
-                if (table != "OrokinCaptureRewardsA") continue;
-                Console.WriteLine("Searching for " + table);
-                var positions2 = GetPositions(bigfile, table + "A\u0008");   
-                if (positions2.Count == 0)
-                    Console.WriteLine("Found {0} instances.", positions2.Count);
-                switch (positions2.Count)
+                if (table == "OrokinCaptureRewardsA" && Dev)
                 {
-                    case 1:
-                        if (!rewardPos.ContainsKey(positions2[0]))
-                            rewardPos.Add(positions2[0], table + "?");
-                        break;
-                    case 2:
-                        if (!rewardPos.ContainsKey(positions2[0]))
-                            rewardPos.Add(positions2[0], table + "-11");
-                        if (!rewardPos.ContainsKey(positions2[1]))
-                            rewardPos.Add(positions2[1], table + "-12");
-                        break;
+                    Console.WriteLine("Searching for " + table);
+                    var positions2 = GetPositions(bigfile, table + "A\u0008");
+                    if (positions2.Count == 0)
+                        Console.WriteLine("Found {0} instances.", positions2.Count);
+                    switch (positions2.Count)
+                    {
+                        case 1:
+                            if (!rewardPos.ContainsKey(positions2[0]))
+                                rewardPos.Add(positions2[0], table + "?");
+                            break;
+                        case 2:
+                            if (!rewardPos.ContainsKey(positions2[0]))
+                                rewardPos.Add(positions2[0], table + "-11");
+                            if (!rewardPos.ContainsKey(positions2[1]))
+                                rewardPos.Add(positions2[1], table + "-12");
+                            break;
+                    }
+                }
+                else if (table.Contains("Orokin") && !Dev)
+                {
+                    Console.WriteLine("Searching for " + table);
+                    var positions2 = GetPositions(bigfile, table + "\u0001");
+                    if (positions2.Count == 0)
+                        Console.WriteLine("Found {0} instances.", positions2.Count);
+                    switch (positions2.Count)
+                    {
+                        case 1:
+                            if (!rewardPos.ContainsKey(positions2[0]))
+                                rewardPos.Add(positions2[0], table + "?");
+                            break;
+                        case 2:
+                            if (!rewardPos.ContainsKey(positions2[0]))
+                                rewardPos.Add(positions2[0], table + "-11");
+                            if (!rewardPos.ContainsKey(positions2[1]))
+                                rewardPos.Add(positions2[1], table + "-12");
+                            break;
+                    }
                 }
             }
             sortedReward = rewardPos.Keys.ToList();
