@@ -94,7 +94,7 @@ namespace Warframe_RewardTables
                     var parts = file[i].TrimEnd(',').Split('/');
                     var name = parts[parts.Length - 1];
                     if (name.Trim().Length == 0) continue;
-                    if (!dropTableList.Contains(name)) dropTableList.Add(name);
+                    if (!dropTableList.Contains(name)) dropTableList.Add(name.Trim());
                 }
             }
             Console.WriteLine("Found {0} used reward table types.", rewardList.Count);
@@ -123,14 +123,17 @@ namespace Warframe_RewardTables
             {
                 Console.WriteLine("Searching for " + table + "A");
                 var positions = GetPositions(bigfile, table + "A" + "\u0001");
-                if (positions.Count == 0)
+                if (positions.Count == 0 || positions.Count > 1)
                     Console.WriteLine("Found {0} instances.", positions.Count);
                 if (positions.Count == 1)
-                    rewardPos.Add(positions[0], table);
+                    if (!rewardPos.ContainsKey(positions[0]))
+                        rewardPos.Add(positions[0], table);
                 else if (positions.Count == 2)
                 {
-                    rewardPos.Add(positions[0], table + "-1");
-                    rewardPos.Add(positions[1], table + "-2");
+                    if (!rewardPos.ContainsKey(positions[0]))
+                        rewardPos.Add(positions[0], table + "-1");
+                    if (!rewardPos.ContainsKey(positions[1]))
+                        rewardPos.Add(positions[1], table + "-2");
                 }
                 if (table == "OrokinCaptureRewardsA" && Dev)
                 {
