@@ -68,6 +68,7 @@ namespace Warframe_RewardTables
             Console.WriteLine("Starting parsing extracted file.");
             var file = File.ReadAllLines(filename);
             var bigfile = string.Join("", file).Replace("\0", "");
+            bigfile = bigfile.Substring(bigfile.IndexOf("Applet@"));
             for (int i = 0; i < file.Length; i++)
             {
                 file[i] = file[i].Replace("\0", "").Trim();
