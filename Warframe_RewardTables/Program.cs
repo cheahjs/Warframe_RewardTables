@@ -123,6 +123,11 @@ namespace Warframe_RewardTables
             {
                 Console.WriteLine("Searching for " + table + "A");
                 var positions = GetPositions(bigfile, table + "A" + "\u0001");
+                if (positions.Count == 0 && Dev)
+                {
+                    Console.WriteLine("Searching again.");
+                    positions = GetPositions(bigfile, table + "A" + "\u0002");
+                }
                 if (positions.Count == 0 || positions.Count > 1)
                     Console.WriteLine("Found {0} instances.", positions.Count);
                 if (positions.Count == 1)
@@ -138,7 +143,7 @@ namespace Warframe_RewardTables
                 if (table == "OrokinCaptureRewardsA" && Dev)
                 {
                     Console.WriteLine("Searching for " + table);
-                    var positions2 = GetPositions(bigfile, table + "A\u0008");
+                    var positions2 = GetPositions(bigfile, table + "A");
                     if (positions2.Count == 0)
                         Console.WriteLine("Found {0} instances.", positions2.Count);
                     switch (positions2.Count)
@@ -189,6 +194,13 @@ namespace Warframe_RewardTables
                 var searchstring = table + "A" + "\u0001";
                 Console.WriteLine("Searching for {0}", searchstring);
                 var positions = GetPositions(bigfile, searchstring);
+                if (positions.Count == 0 && Dev)
+                {
+                    Console.WriteLine("Searching again.");
+                    positions = GetPositions(bigfile, table + "A" + "\u0002");
+                }
+                if (positions.Count == 0 || positions.Count > 1)
+                    Console.WriteLine("Found {0} instances.", positions.Count);
                 if (!dropPos.ContainsKey(positions[0])) dropPos.Add(positions[0], table);
             }
             sortedDrop = dropPos.Keys.ToList();
