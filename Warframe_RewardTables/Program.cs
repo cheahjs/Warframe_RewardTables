@@ -87,7 +87,7 @@ namespace Warframe_RewardTables
                     var nameparts = parts[1].Split('/');
                     var name = nameparts[nameparts.Length - 1];
                     if (name.Trim().Length == 0) continue;
-                    if (!rewardList.Contains(parts[1])) rewardList.Add(name);
+                    if (!rewardList.Contains(name)) rewardList.Add(name);
                 }
                 else if (file[i].Contains("/Lotus/Types/DropTables/") && file[i].Length < 2000) //char limit, else we start parsing the TOC
                 {
@@ -403,10 +403,35 @@ namespace Warframe_RewardTables
                 item.Interval = interval;
             }
             TotalTables++;
-            var matherrors = Math.Abs(1 - interval) > 0.1;
-            if (matherrors) BadTables++;
+            var matherrors = Math.Abs(1 - interval) > 0.01;
+            if (matherrors)
+            {
+                BadTables++;
+                double multiplier = 1/interval;
+                rarechance = rarechance*multiplier;
+                commonchance = commonchance*multiplier;
+                uncommonchance = uncommonchance*multiplier;
+                interval = 0;
+                foreach (var item in list)
+                {
+                    switch (item.Rarity.ToLower())
+                    {
+                        case "rare":
+                            item.Chance = rarechance;
+                            break;
+                        case "common":
+                            item.Chance = commonchance;
+                            break;
+                        case "uncommon":
+                            item.Chance = uncommonchance;
+                            break;
+                    }
+                    interval += item.Chance;
+                    item.Interval = interval;
+                }
+            }
             var write = "Tier " + tier + " - " + tablename
-                + (matherrors ? " (Chance calculation flawed)" : "") + ",Chance,Interval,Rarity";
+                + (matherrors ? " (Calculation flawed | normalized)" : "") + ",Chance,Interval,Rarity";
             write = list.Aggregate(write, (current, item) => current + ("\n" + item.StoreName + "," + item.Chance + "," + item.Interval + "," + item.Rarity));
             return write;
         }
@@ -468,8 +493,33 @@ namespace Warframe_RewardTables
             }
             TotalTables++;
             var matherrors = Math.Abs(1 - interval) > 0.1;
-            if (matherrors) BadTables++;
-            var write = "Tier " + tier + (matherrors ? " (Chance calculation flawed)" : "") + ",Chance,Interval,Rarity";
+            if (matherrors)
+            {
+                BadTables++;
+                double multiplier = 1 / interval;
+                rarechance = rarechance * multiplier;
+                commonchance = commonchance * multiplier;
+                uncommonchance = uncommonchance * multiplier;
+                interval = 0;
+                foreach (var item in list)
+                {
+                    switch (item.Rarity.ToLower())
+                    {
+                        case "rare":
+                            item.Chance = rarechance;
+                            break;
+                        case "common":
+                            item.Chance = commonchance;
+                            break;
+                        case "uncommon":
+                            item.Chance = uncommonchance;
+                            break;
+                    }
+                    interval += item.Chance;
+                    item.Interval = interval;
+                }
+            }
+            var write = "Tier " + tier + (matherrors ? " (Calculation flawed | normalized)" : "") + ",Chance,Interval,Rarity";
             write = list.Aggregate(write, (current, item) => current + ("\n" + item.StoreName + "," + item.Chance + "," + item.Interval + "," + item.Rarity));
             return write;
         }
